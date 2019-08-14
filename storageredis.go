@@ -136,7 +136,14 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 	var pointer uint64 = 0
 	var search string
 
-	search = rd.prefixKey(prefix) + "*"
+	// assuming we want to list all keys
+	if prefix == "*" {
+		search = rd.prefixKey(prefix)
+	} else if len(strings.TrimSpace(prefix)) == 0 {
+		search = rd.prefixKey("*")
+	} else {
+		search = rd.prefixKey(prefix) + "*"
+	}
 
 	// first SCAN command
 	keys, pointer, err := rd.Client.Scan(pointer, search, ScanCount).Result()
@@ -152,7 +159,11 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 		pointer = nextPointer
 	}
 
-	search = rd.prefixKey(prefix)
+	if prefix == "*" || len(strings.TrimSpace(prefix)) == 0 {
+		search = rd.Options.KeyPrefix
+	} else {
+		search = rd.prefixKey(prefix)
+	}
 
 	// remove default prefix from keys
 	for _, key := range tempKeys {
@@ -162,8 +173,8 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 		}
 	}
 
-	// if recursive wanted, just return all keys
-	if recursive {
+	// if recursive wanted, or wildcard/empty prefix, just return all keys prefix is empty
+	if recursive || prefix == "*" || len(strings.TrimSpace(prefix)) == 0 {
 		return keysFound, nil
 	}
 
