@@ -16,6 +16,13 @@ func setupRedisEnv(t *testing.T) *RedisStorage {
 	os.Setenv(EnvNameRedisDB, "9")
 
 	rd, err := GetRedisStorage()
+
+	// skip test if no redis storage
+	if err != nil {
+		t.Skip()
+		return nil
+	}
+
 	assert.NoError(t, err)
 	assert.Equal(t, TestPrefix, rd.Options.KeyPrefix)
 	assert.Equal(t, 9, rd.Options.DB)

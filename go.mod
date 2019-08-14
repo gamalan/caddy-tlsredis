@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/bsm/redislock v0.3.0
-	github.com/caddyserver/caddy v1.0.1
+	github.com/caddyserver/caddy v1.0.3
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/go-acme/lego v2.7.2+incompatible // indirect
 	github.com/go-redis/redis v6.15.2+incompatible
