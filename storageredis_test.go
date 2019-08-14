@@ -115,6 +115,16 @@ func TestRedisStorage_List(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
+
+	keys, err = rd.List("", true)
+	assert.NoError(t, err)
+	assert.Len(t, keys, 3)
+	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
+
+	keys, err = rd.List("   ", true)
+	assert.NoError(t, err)
+	assert.Len(t, keys, 3)
+	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
 }
 
 func TestRedisStorage_ListNonRecursive(t *testing.T) {
@@ -134,6 +144,18 @@ func TestRedisStorage_ListNonRecursive(t *testing.T) {
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com"))
 
 	keys, err = rd.List("*", false)
+	assert.NoError(t, err)
+
+	assert.Len(t, keys, 1)
+	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com"))
+
+	keys, err = rd.List("", false)
+	assert.NoError(t, err)
+
+	assert.Len(t, keys, 1)
+	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com"))
+
+	keys, err = rd.List("   ", false)
 	assert.NoError(t, err)
 
 	assert.Len(t, keys, 1)

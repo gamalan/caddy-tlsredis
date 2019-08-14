@@ -139,6 +139,8 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 	// assuming we want to list all keys
 	if prefix == "*" {
 		search = rd.prefixKey(prefix)
+	} else if len(strings.TrimSpace(prefix)) == 0 {
+		search = rd.prefixKey("*")
 	} else {
 		search = rd.prefixKey(prefix) + "*"
 	}
@@ -157,7 +159,7 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 		pointer = nextPointer
 	}
 
-	if prefix == "*" {
+	if prefix == "*" || len(strings.TrimSpace(prefix)) == 0 {
 		search = rd.Options.KeyPrefix
 	} else {
 		search = rd.prefixKey(prefix)
