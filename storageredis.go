@@ -173,8 +173,8 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 		}
 	}
 
-	// if recursive wanted, just return all keys
-	if recursive {
+	// if recursive wanted, just return all keys prefix is empty
+	if recursive || prefix == "*" || len(strings.TrimSpace(prefix)) == 0 {
 		return keysFound, nil
 	}
 
