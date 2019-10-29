@@ -35,6 +35,9 @@ const (
 	// DefaultRedisTLS define the Redis TLS connection
 	DefaultRedisTLS = false
 
+	// DefaultRedisTLSInsecure define the Redis TLS connection
+	DefaultRedisTLSInsecure = true
+
 	// Environment Name
 
 	// EnvNameRedisHost defines the env variable name to override Redis host
@@ -63,6 +66,9 @@ const (
 
 	// EnvNameTLSEnabled defines the env variable name to whether enable Redis TLS Connection or not
 	EnvNameTLSEnabled = "CADDY_CLUSTERING_REDIS_TLS"
+
+	// EnvNameTLSInsecure defines the env variable name to whether verify Redis TLS Connection or not
+	EnvNameTLSInsecure = "CADDY_CLUSTERING_REDIS_TLS_INSECURE"
 )
 
 // Options is option to set plugin configuration
@@ -76,6 +82,7 @@ type Options struct {
 	ValuePrefix string
 	AESKey      string
 	TLSEnabled  bool
+	TLSInsecure bool
 }
 
 // GetOptions generate options from env or default
@@ -131,6 +138,17 @@ func GetOptions() *Options {
 		}
 	} else {
 		options.TLSEnabled = DefaultRedisTLS
+	}
+
+	if tlsInsecure := os.Getenv(EnvNameTLSInsecure); tlsInsecure != "" {
+		tlsInsecureParse, err := strconv.ParseBool(tlsInsecure)
+		if err == nil {
+			options.TLSInsecure = tlsInsecureParse
+		} else {
+			options.TLSInsecure = DefaultRedisTLSInsecure
+		}
+	} else {
+		options.TLSInsecure = DefaultRedisTLSInsecure
 	}
 
 	if keyPrefix := os.Getenv(EnvNameKeyPrefix); keyPrefix != "" {

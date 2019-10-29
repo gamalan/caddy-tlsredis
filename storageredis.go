@@ -62,7 +62,7 @@ func GetRedisStorage() (*RedisStorage, error) {
 
 	if opt.TLSEnabled {
 		redisClient.Options().TLSConfig = &tls.Config{
-			InsecureSkipVerify: false,
+			InsecureSkipVerify: opt.TLSInsecure,
 		}
 	}
 
