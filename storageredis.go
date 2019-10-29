@@ -1,6 +1,7 @@
 package storageredis
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path"
 	"strings"
@@ -58,6 +59,12 @@ func GetRedisStorage() (*RedisStorage, error) {
 		ReadTimeout:  time.Second * time.Duration(opt.Timeout),
 		WriteTimeout: time.Second * time.Duration(opt.Timeout),
 	})
+
+	if opt.TLSEnabled {
+		redisClient.Options().TLSConfig = &tls.Config{
+			InsecureSkipVerify: opt.TLSInsecure,
+		}
+	}
 
 	_, err := redisClient.Ping().Result()
 	if err != nil {

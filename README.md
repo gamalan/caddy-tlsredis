@@ -23,6 +23,8 @@ There are additional environment variable for this plugin:
 - `CADDY_CLUSTERING_REDIS_AESKEY` defines your personal AES key to use when encrypting data. It needs to be 32 characters long.
 - `CADDY_CLUSTERING_REDIS_KEYPREFIX` defines the prefix for the keys. Default is `caddytls`
 - `CADDY_CLUSTERING_REDIS_VALUEPREFIX` defines the prefix for the values. Default is `caddy-storage-redis`
+- `CADDY_CLUSTERING_REDIS_TLS` defines whether use Redis TLS Connection or not
+- `CADDY_CLUSTERING_REDIS_TLS_INSECURE` defines whether verify Redis TLS Connection or not
 
 ## TODO
 

@@ -32,6 +32,12 @@ const (
 	// DefaultRedisTimeout define the Redis wait time in (s)
 	DefaultRedisTimeout = 5
 
+	// DefaultRedisTLS define the Redis TLS connection
+	DefaultRedisTLS = false
+
+	// DefaultRedisTLSInsecure define the Redis TLS connection
+	DefaultRedisTLSInsecure = true
+
 	// Environment Name
 
 	// EnvNameRedisHost defines the env variable name to override Redis host
@@ -57,6 +63,12 @@ const (
 
 	// EnvNameValuePrefix defines the env variable name to override KV value prefix
 	EnvNameValuePrefix = "CADDY_CLUSTERING_REDIS_VALUEPREFIX"
+
+	// EnvNameTLSEnabled defines the env variable name to whether enable Redis TLS Connection or not
+	EnvNameTLSEnabled = "CADDY_CLUSTERING_REDIS_TLS"
+
+	// EnvNameTLSInsecure defines the env variable name to whether verify Redis TLS Connection or not
+	EnvNameTLSInsecure = "CADDY_CLUSTERING_REDIS_TLS_INSECURE"
 )
 
 // Options is option to set plugin configuration
@@ -69,6 +81,8 @@ type Options struct {
 	KeyPrefix   string
 	ValuePrefix string
 	AESKey      string
+	TLSEnabled  bool
+	TLSInsecure bool
 }
 
 // GetOptions generate options from env or default
@@ -113,6 +127,28 @@ func GetOptions() *Options {
 		options.Password = password
 	} else {
 		options.Password = DefaultRedisPassword
+	}
+
+	if tlsEnabled := os.Getenv(EnvNameTLSEnabled); tlsEnabled != "" {
+		tlsEnabledParse, err := strconv.ParseBool(tlsEnabled)
+		if err == nil {
+			options.TLSEnabled = tlsEnabledParse
+		} else {
+			options.TLSEnabled = DefaultRedisTLS
+		}
+	} else {
+		options.TLSEnabled = DefaultRedisTLS
+	}
+
+	if tlsInsecure := os.Getenv(EnvNameTLSInsecure); tlsInsecure != "" {
+		tlsInsecureParse, err := strconv.ParseBool(tlsInsecure)
+		if err == nil {
+			options.TLSInsecure = tlsInsecureParse
+		} else {
+			options.TLSInsecure = DefaultRedisTLSInsecure
+		}
+	} else {
+		options.TLSInsecure = DefaultRedisTLSInsecure
 	}
 
 	if keyPrefix := os.Getenv(EnvNameKeyPrefix); keyPrefix != "" {
