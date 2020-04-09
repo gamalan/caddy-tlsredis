@@ -42,6 +42,7 @@ func init() {
 	caddy.RegisterModule(RedisStorage{})
 }
 
+// register caddy module with ID caddy.storage.redis
 func (RedisStorage) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID: "caddy.storage.redis",
@@ -51,13 +52,9 @@ func (RedisStorage) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (rd *RedisStorage) Provision(ctx caddy.Context) error {
-	rd, err := GetRedisStorage()
-
-	if err != nil {
-		return err
-	}
-	return nil
+// CertMagicStorage converts s to a certmagic.Storage instance.
+func (rd RedisStorage) CertMagicStorage() (certmagic.Storage, error) {
+	return GetRedisStorage()
 }
 
 // helper function to prefix key
@@ -311,6 +308,7 @@ func (rd RedisStorage) Unlock(key string) error {
 	return nil
 }
 
+// interface guard
 var (
-	_ caddy.Provisioner = (*RedisStorage)(nil)
+	_ caddy.StorageConverter = (*RedisStorage)(nil)
 )
