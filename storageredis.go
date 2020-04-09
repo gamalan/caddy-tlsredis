@@ -3,14 +3,14 @@ package storageredis
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/caddyserver/caddy/v2"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/bsm/redislock"
-	"github.com/caddyserver/caddy/caddytls"
+	"github.com/caddyserver/certmagic"
 	"github.com/go-redis/redis"
-	"github.com/mholt/certmagic"
 )
 
 const (
@@ -39,7 +39,25 @@ type StorageData struct {
 }
 
 func init() {
-	caddytls.RegisterClusterPlugin("redis", constructRedisClusterPlugin)
+	caddy.RegisterModule(RedisStorage{})
+}
+
+func (RedisStorage) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID: "caddy.storage.redis",
+		New: func() caddy.Module {
+			return new(RedisStorage)
+		},
+	}
+}
+
+func (rd *RedisStorage) Provision(ctx caddy.Context) error {
+	rd, err := GetRedisStorage()
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // helper function to prefix key
@@ -293,6 +311,6 @@ func (rd RedisStorage) Unlock(key string) error {
 	return nil
 }
 
-func constructRedisClusterPlugin() (certmagic.Storage, error) {
-	return GetRedisStorage()
-}
+var (
+	_ caddy.Provisioner = (*RedisStorage)(nil)
+)

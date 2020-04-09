@@ -1,7 +1,7 @@
 package storageredis
 
 import (
-	"github.com/mholt/certmagic"
+	"github.com/caddyserver/certmagic"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
