@@ -3,12 +3,12 @@ package storageredis
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/caddyserver/caddy/v2"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/bsm/redislock"
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/certmagic"
 	"github.com/go-redis/redis"
 )
