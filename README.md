@@ -12,7 +12,7 @@ This plugin currently work with versions of Caddy that use https://github.com/mh
 and its new storage interface (> 0.11.1)
 
 ## Configuration
-You enable Consul storage with Caddy by setting the `CADDY_CLUSTERING` environment variable to `redis`.
+You enable Redis storage with Caddy by setting the `CADDY_CLUSTERING` environment variable to `redis`.
 
 There are additional environment variable for this plugin:
 - `CADDY_CLUSTERING_REDIS_HOST` defines Redis Host, default is `127.0.0.1`
