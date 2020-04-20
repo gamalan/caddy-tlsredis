@@ -14,8 +14,19 @@ and its new storage interface (> 0.11.1)
 ## Configuration
 You enable Redis storage with Caddy by setting the storage module used, for example
 ```
+//all value is optional, here is the default
 storage redis {
-
+  host          "127.0.0.1"
+  port          6379
+  address       "127.0.0.1:6379" // no default, but is build from host+":"+port, if set, then host and port is ignored
+  password      ""
+  db            1
+  key_prefix    "caddytls"
+  value_prefix  "caddy-storage-redis"
+  timeout       5
+  tls_enabled   "false"
+  tls_insecure  "true"
+  aes_key       "redistls-01234567890-caddytls-32" // optional, but must have 32 length
 }
 // because the option are set using env, there are no need for additional option value
 ```
