@@ -364,6 +364,8 @@ func (rd *RedisStorage) buildRedisClient() error {
 	}
 
 	rd.Client = redisClient
+	rd.ClientLocker = redislock.New(rd.Client)
+	rd.locks = make(map[string]*redislock.Lock)
 	return nil
 }
 
