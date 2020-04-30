@@ -8,8 +8,7 @@ For now, this will support redis as single instance, or with replica, but NOT th
 This plugin utilize [go-redis/redis](https://github.com/go-redis/redis) for its client access and [redislock](https://github.com/bsm/redislock)
 for it's locking mechanism. See [distlock](https://redis.io/topics/distlock) for the lock algorithm.
 
-This plugin currently work with versions of Caddy that use https://github.com/mholt/certmagic
-and its new storage interface (> 0.11.1)
+This plugin currently work with versions of Caddy v2, for the previous version of Caddy use [caddy-v1](https://github.com/gamalan/caddy-tlsredis/tree/caddy-v1) branch.
 
 ## Configuration
 You enable Redis storage with Caddy by setting the storage module used, for example
