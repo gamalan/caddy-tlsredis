@@ -1,11 +1,13 @@
 package storageredis
 
 import (
-	"github.com/caddyserver/certmagic"
-	"github.com/stretchr/testify/assert"
+	"context"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/caddyserver/certmagic"
+	"github.com/stretchr/testify/assert"
 )
 
 const TestPrefix = "redistlstest"
@@ -175,7 +177,7 @@ func TestRedisStorage_LockUnlock(t *testing.T) {
 	rd := setupRedisEnv(t)
 	lockKey := path.Join("acme", "example.com", "sites", "example.com", "lock")
 
-	err := rd.Lock(lockKey)
+	err := rd.Lock(context.TODO(), lockKey)
 	assert.NoError(t, err)
 
 	err = rd.Unlock(lockKey)
@@ -187,11 +189,11 @@ func TestRedisStorage_TwoLocks(t *testing.T) {
 	rd2 := setupRedisEnv(t)
 	lockKey := path.Join("acme", "example.com", "sites", "example.com", "lock")
 
-	err := rd.Lock(lockKey)
+	err := rd.Lock(context.TODO(), lockKey)
 	assert.NoError(t, err)
 
 	// other instance shouldn't be able lock it
-	err = rd2.Lock(lockKey)
+	err = rd2.Lock(context.TODO(), lockKey)
 	assert.Error(t, err)
 
 	// let's unlock it first so other can lock it
@@ -199,7 +201,7 @@ func TestRedisStorage_TwoLocks(t *testing.T) {
 	assert.NoError(t, err)
 
 	// we should be able to lock it
-	err = rd2.Lock(lockKey)
+	err = rd2.Lock(context.TODO(), lockKey)
 	assert.NoError(t, err)
 
 	// and unlock

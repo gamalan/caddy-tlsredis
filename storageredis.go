@@ -1,15 +1,17 @@
 package storageredis
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"go.uber.org/zap"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"go.uber.org/zap"
 
 	"github.com/bsm/redislock"
 	"github.com/caddyserver/caddy/v2"
@@ -535,7 +537,7 @@ func (rd RedisStorage) getDataDecrypted(key string) (*StorageData, error) {
 }
 
 // Lock is to lock value
-func (rd RedisStorage) Lock(key string) error {
+func (rd RedisStorage) Lock(ctx context.Context, key string) error {
 	lockName := rd.prefixKey(key) + ".lock"
 
 	// check if we have the lock
@@ -558,7 +560,7 @@ func (rd RedisStorage) Lock(key string) error {
 	}
 
 	// obtain new lock
-	lockActive, err := rd.ClientLocker.Obtain(lockName, LockDuration, nil)
+	lockActive, err := rd.ClientLocker.Obtain(lockName, LockDuration, &redislock.Options{Context: ctx})
 	if err != nil {
 		return fmt.Errorf("can't obtain lock, it still being held by other, %v", err)
 	}
