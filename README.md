@@ -29,6 +29,29 @@ storage redis {
 }
 // because the option are set using env, there are no need for additional option value
 ```
+
+JSON example
+```
+{
+	"admin": {
+		"listen": "0.0.0.0:2019"
+	},
+	"storage": {
+		"address": "redis:6379",
+		"aes_key": "redistls-01234567890-caddytls-32",
+		"db": 1,
+		"host": "redis",
+		"key_prefix": "caddytls",
+		"module": "redis",
+		"password": "",
+		"port": "6379",
+		"timeout": 5,
+		"tls_enabled": false,
+		"tls_insecure": true,
+		"value_prefix": "caddy-storage-redis"
+	}
+}
+```
 There are additional environment variable for this plugin:
 - `CADDY_CLUSTERING_REDIS_HOST` defines Redis Host, default is `127.0.0.1`
 - `CADDY_CLUSTERING_REDIS_PORT` defines Redis Port, default is 6379
