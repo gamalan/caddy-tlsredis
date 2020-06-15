@@ -10,7 +10,7 @@ import (
 func TestRedisStorage_EncryptDecryptStorageData(t *testing.T) {
 	testDate := time.Now()
 	rd := new(RedisStorage)
-	rd.getConfigValue()
+	rd.GetConfigValue()
 
 	sd := &StorageData{
 		Value:    []byte("crt data"),
