@@ -242,16 +242,16 @@ func (rd *RedisStorage) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 func (rd *RedisStorage) Provision(ctx caddy.Context) error {
 	rd.Logger = ctx.Logger(rd).Sugar()
-	rd.getConfigValue()
+	rd.GetConfigValue()
 	rd.Logger.Info("TLS Storage are using Redis, on " + rd.Address)
-	if err := rd.buildRedisClient(); err != nil {
+	if err := rd.BuildRedisClient(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// getConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
-func (rd *RedisStorage) getConfigValue() {
+// GetConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
+func (rd *RedisStorage) GetConfigValue() {
 	if host := os.Getenv(EnvNameRedisHost); host != "" && rd.Host == "" {
 		rd.Host = host
 	} else {
@@ -342,7 +342,7 @@ func (rd *RedisStorage) prefixKey(key string) string {
 }
 
 // GetRedisStorage build RedisStorage with it's client
-func (rd *RedisStorage) buildRedisClient() error {
+func (rd *RedisStorage) BuildRedisClient() error {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:         rd.Address,
 		Password:     rd.Password,
