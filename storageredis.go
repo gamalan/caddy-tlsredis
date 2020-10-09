@@ -3,6 +3,7 @@ package storageredis
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -136,7 +137,7 @@ func (RedisStorage) CaddyModule() caddy.ModuleInfo {
 }
 
 // CertMagicStorage converts s to a certmagic.Storage instance.
-func (rd RedisStorage) CertMagicStorage() (certmagic.Storage, error) {
+func (rd *RedisStorage) CertMagicStorage() (certmagic.Storage, error) {
 	return rd, nil
 }
 
@@ -254,88 +255,18 @@ func (rd *RedisStorage) Provision(ctx caddy.Context) error {
 
 // GetConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
 func (rd *RedisStorage) GetConfigValue() {
-	if host := os.Getenv(EnvNameRedisHost); host != "" && rd.Host == "" {
-		rd.Host = host
-	} else {
-		rd.Host = DefaultRedisHost
-	}
-	if port := os.Getenv(EnvNameRedisPort); port != "" && rd.Port == "" {
-		rd.Port = port
-	} else {
-		rd.Port = DefaultRedisPort
-	}
-
-	if db := os.Getenv(EnvNameRedisDB); db != "" && rd.DB == 0 {
-		dbParse, err := strconv.Atoi(db)
-		if err == nil {
-			rd.DB = dbParse
-		} else {
-			rd.DB = DefaultRedisDB
-		}
-	} else {
-		rd.DB = DefaultRedisDB
-	}
-
-	if timeout := os.Getenv(EnvNameRedisTimeout); timeout != "" && rd.Timeout == 0 {
-		timeoutParse, err := strconv.Atoi(timeout)
-		if err == nil {
-			rd.Timeout = timeoutParse
-		} else {
-			rd.Timeout = DefaultRedisTimeout
-		}
-	} else {
-		rd.Timeout = DefaultRedisTimeout
-	}
-
-	if password := os.Getenv(EnvNameRedisPassword); password != "" && rd.Password == "" {
-		rd.Password = password
-	} else {
-		rd.Password = DefaultRedisPassword
-	}
-
-	if tlsEnabled := os.Getenv(EnvNameTLSEnabled); tlsEnabled != "" && rd.TlsEnabled == false {
-		tlsEnabledParse, err := strconv.ParseBool(tlsEnabled)
-		if err == nil {
-			rd.TlsEnabled = tlsEnabledParse
-		} else {
-			rd.TlsEnabled = DefaultRedisTLS
-		}
-	} else {
-		rd.TlsEnabled = DefaultRedisTLS
-	}
-
-	if tlsInsecure := os.Getenv(EnvNameTLSInsecure); tlsInsecure != "" && rd.TlsInsecure == false {
-		tlsInsecureParse, err := strconv.ParseBool(tlsInsecure)
-		if err == nil {
-			rd.TlsInsecure = tlsInsecureParse
-		} else {
-			rd.TlsInsecure = DefaultRedisTLSInsecure
-		}
-	} else {
-		rd.TlsInsecure = DefaultRedisTLSInsecure
-	}
-
-	if keyPrefix := os.Getenv(EnvNameKeyPrefix); keyPrefix != "" && rd.KeyPrefix == "" {
-		rd.KeyPrefix = keyPrefix
-	} else {
-		rd.KeyPrefix = DefaultKeyPrefix
-	}
-
-	if valuePrefix := os.Getenv(EnvNameValuePrefix); valuePrefix != "" && rd.ValuePrefix == "" {
-		rd.ValuePrefix = valuePrefix
-	} else {
-		rd.ValuePrefix = DefaultValuePrefix
-	}
-
-	if aesKey := os.Getenv(EnvNameAESKey); aesKey != "" && rd.AesKey == "" {
-		rd.AesKey = aesKey
-	} else {
-		rd.AesKey = DefaultAESKey
-	}
-
-	if rd.Address == "" {
-		rd.Address = rd.Host + ":" + rd.Port
-	}
+	rd.Logger.Debugf("GetConfigValue [%s]:%s", "pre", rd)
+	rd.Port = configureString(rd.Port, EnvNameRedisPort, DefaultRedisPort)
+	rd.DB = configureInt(rd.DB, EnvNameRedisDB, DefaultRedisDB)
+	rd.Timeout = configureInt(rd.Timeout, EnvNameRedisTimeout, DefaultRedisTimeout)
+	rd.Password = configureString(rd.Password, EnvNameRedisPassword, DefaultRedisPassword)
+	rd.TlsEnabled = configureBool(rd.TlsEnabled, EnvNameTLSEnabled, DefaultRedisTLS)
+	rd.TlsInsecure = configureBool(rd.TlsInsecure, EnvNameTLSInsecure, DefaultRedisTLSInsecure)
+	rd.KeyPrefix = configureString(rd.KeyPrefix, EnvNameKeyPrefix, DefaultKeyPrefix)
+	rd.ValuePrefix = configureString(rd.ValuePrefix, EnvNameValuePrefix, DefaultValuePrefix)
+	rd.AesKey = configureString(rd.AesKey, EnvNameAESKey, DefaultAESKey)
+	rd.Address = configureString(rd.Address, "", rd.Host+":"+rd.Port)
+	rd.Logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
 }
 
 // helper function to prefix key
@@ -593,3 +524,53 @@ var (
 	_ caddyfile.Unmarshaler  = (*RedisStorage)(nil)
 	_ caddy.Provisioner      = (*RedisStorage)(nil)
 )
+
+func (rd RedisStorage) String() string {
+	json, _ := json.Marshal(rd)
+	return string(json)
+}
+
+func configureBool(value bool, envVariableName string, valueDefault bool) bool {
+	if value {
+		return value
+	}
+	if envVariableName != "" {
+		valueEnvStr := os.Getenv(envVariableName)
+		if valueEnvStr != "" {
+			valueEnv, err := strconv.ParseBool(os.Getenv(envVariableName))
+			if err == nil {
+				return valueEnv
+			}
+		}
+	}
+	return valueDefault
+}
+
+func configureInt(value int, envVariableName string, valueDefault int) int {
+	if value != 0 {
+		return value
+	}
+	if envVariableName != "" {
+		valueEnvStr := os.Getenv(envVariableName)
+		if valueEnvStr != "" {
+			valueEnv, err := strconv.Atoi(os.Getenv(envVariableName))
+			if err == nil {
+				return valueEnv
+			}
+		}
+	}
+	return valueDefault
+}
+
+func configureString(value string, envVariableName string, valueDefault string) string {
+	if value != "" {
+		return value
+	}
+	if envVariableName != "" {
+		valueEnvStr := os.Getenv(envVariableName)
+		if valueEnvStr != "" {
+			return valueEnvStr
+		}
+	}
+	return valueDefault
+}
