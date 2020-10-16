@@ -143,101 +143,103 @@ func (rd *RedisStorage) CertMagicStorage() (certmagic.Storage, error) {
 
 func (rd *RedisStorage) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
-		args := d.RemainingArgs()
-		if len(args) > 1 {
-			switch args[0] {
-			case "address":
-				if args[1] != "" {
-					parsedAddress, err := caddy.ParseNetworkAddress(args[1])
-					if err == nil {
-						rd.Address = parsedAddress.JoinHostPort(0)
-					} else {
-						rd.Address = ""
-					}
-				}
-			case "host":
-				if args[1] != "" {
-					rd.Host = args[1]
+		key := d.Val()
+		var value string
+
+		if !d.Args(&value) {
+			continue
+		}
+
+		switch key {
+		case "address":
+			if value != "" {
+				parsedAddress, err := caddy.ParseNetworkAddress(value)
+				if err == nil {
+					rd.Address = parsedAddress.JoinHostPort(0)
 				} else {
-					rd.Host = DefaultRedisHost
+					rd.Address = ""
 				}
-			case "port":
-				if args[1] != "" {
-					rd.Port = args[1]
-				} else {
-					rd.Port = DefaultRedisPort
-				}
-			case "db":
-				if args[1] != "" {
-					dbParse, err := strconv.Atoi(args[1])
-					if err == nil {
-						rd.DB = dbParse
-					} else {
-						rd.DB = DefaultRedisDB
-					}
+			}
+		case "host":
+			if value != "" {
+				rd.Host = value
+			} else {
+				rd.Host = DefaultRedisHost
+			}
+		case "port":
+			if value != "" {
+				rd.Port = value
+			} else {
+				rd.Port = DefaultRedisPort
+			}
+		case "db":
+			if value != "" {
+				dbParse, err := strconv.Atoi(value)
+				if err == nil {
+					rd.DB = dbParse
 				} else {
 					rd.DB = DefaultRedisDB
 				}
-			case "password":
-				if args[1] != "" {
-					rd.Password = args[1]
-				} else {
-					rd.Password = DefaultRedisPassword
-				}
-			case "timeout":
-				if args[1] != "" {
-					timeParse, err := strconv.Atoi(args[1])
-					if err == nil {
-						rd.Timeout = timeParse
-					} else {
-						rd.Timeout = DefaultRedisTimeout
-					}
+			} else {
+				rd.DB = DefaultRedisDB
+			}
+		case "password":
+			if value != "" {
+				rd.Password = value
+			} else {
+				rd.Password = DefaultRedisPassword
+			}
+		case "timeout":
+			if value != "" {
+				timeParse, err := strconv.Atoi(value)
+				if err == nil {
+					rd.Timeout = timeParse
 				} else {
 					rd.Timeout = DefaultRedisTimeout
 				}
-			case "key_prefix":
-				if args[1] != "" {
-					rd.KeyPrefix = args[1]
-				} else {
-					rd.KeyPrefix = DefaultKeyPrefix
-				}
-			case "value_prefix":
-				if args[1] != "" {
-					rd.ValuePrefix = args[1]
-				} else {
-					rd.ValuePrefix = DefaultValuePrefix
-				}
-			case "aes_key":
-				if args[1] != "" {
-					rd.AesKey = args[1]
-				} else {
-					rd.AesKey = DefaultAESKey
-				}
-			case "tls_enabled":
-				if args[1] != "" {
-					tlsParse, err := strconv.ParseBool(args[1])
-					if err == nil {
-						rd.TlsEnabled = tlsParse
-					} else {
-						rd.TlsEnabled = DefaultRedisTLS
-					}
+			} else {
+				rd.Timeout = DefaultRedisTimeout
+			}
+		case "key_prefix":
+			if value != "" {
+				rd.KeyPrefix = value
+			} else {
+				rd.KeyPrefix = DefaultKeyPrefix
+			}
+		case "value_prefix":
+			if value != "" {
+				rd.ValuePrefix = value
+			} else {
+				rd.ValuePrefix = DefaultValuePrefix
+			}
+		case "aes_key":
+			if value != "" {
+				rd.AesKey = value
+			} else {
+				rd.AesKey = DefaultAESKey
+			}
+		case "tls_enabled":
+			if value != "" {
+				tlsParse, err := strconv.ParseBool(value)
+				if err == nil {
+					rd.TlsEnabled = tlsParse
 				} else {
 					rd.TlsEnabled = DefaultRedisTLS
 				}
-			case "tls_insecure":
-				if args[1] != "" {
-					tlsInsecureParse, err := strconv.ParseBool(args[1])
-					if err == nil {
-						rd.TlsInsecure = tlsInsecureParse
-					} else {
-						rd.TlsInsecure = DefaultRedisTLSInsecure
-					}
+			} else {
+				rd.TlsEnabled = DefaultRedisTLS
+			}
+		case "tls_insecure":
+			if value != "" {
+				tlsInsecureParse, err := strconv.ParseBool(value)
+				if err == nil {
+					rd.TlsInsecure = tlsInsecureParse
 				} else {
 					rd.TlsInsecure = DefaultRedisTLSInsecure
 				}
+			} else {
+				rd.TlsInsecure = DefaultRedisTLSInsecure
 			}
-		} else {
-			continue
 		}
 	}
 	return nil
