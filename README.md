@@ -70,11 +70,29 @@ There are additional environment variable for this plugin:
 - `CADDY_CLUSTERING_REDIS_TLS` defines whether use Redis TLS Connection or not
 - `CADDY_CLUSTERING_REDIS_TLS_INSECURE` defines whether verify Redis TLS Connection or not
 
+## Import/export
+
+First we need to build the command:
+```bash
+cd cmd/tlsredis
+go build
+```
+
+Now we can **import** existing certificates with the following command:
+
+> **NOTE:** Use the CADDY_CLUSTERING_* environment variables to override the default values
+
+```sh
+./tlsredis import /path/to/existing/caddypath
+```
+
+...or **export** the content of the redis to the filesystem:
+
+```sh
+./tlsredis export /any/folder
+```
+
+
 ## TODO
 
 - Add Redis Cluster or Sentinel support (probably need to update the distlock implementation first)
-
-
-
-
-
