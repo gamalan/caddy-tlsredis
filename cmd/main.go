@@ -17,9 +17,13 @@ func main() {
 	rd := initRedis()
 
 	importCmd := flag.NewFlagSet("import", flag.ExitOnError)
+	importCmd.Usage = func() {
+		fmt.Println("Usage: import CADDY_PATH")
+	}
 	exportCmd := flag.NewFlagSet("export", flag.ExitOnError)
-	source := importCmd.String("source", "", "path to the Caddy Data folder (Required)")
-	dest := exportCmd.String("dest", ".", "path to write the exported files")
+	exportCmd.Usage = func() {
+		fmt.Println("Usage: export DEST_PATH")
+	}
 
 	var cmd string = ""
 	if len(os.Args) >= 2 {
@@ -29,13 +33,18 @@ func main() {
 	switch cmd {
 	case "import":
 		importCmd.Parse(os.Args[2:])
-		if *source == "" {
-			rd.Logger.Fatal("source path not specified")
+		if importCmd.NArg() == 0 {
+			importCmd.Usage()
+			os.Exit(1)
 		}
-		importFiles(rd, *source)
+		importFiles(rd, importCmd.Arg(0))
 	case "export":
 		exportCmd.Parse(os.Args[2:])
-		exportFiles(rd, *dest)
+		if exportCmd.NArg() == 0 {
+			exportCmd.Usage()
+			os.Exit(1)
+		}
+		exportFiles(rd, exportCmd.Arg(0))
 	default:
 		fmt.Println("expected 'import' or 'export' subcommands")
 		os.Exit(1)
