@@ -258,6 +258,7 @@ func (rd *RedisStorage) Provision(ctx caddy.Context) error {
 // GetConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
 func (rd *RedisStorage) GetConfigValue() {
 	rd.Logger.Debugf("GetConfigValue [%s]:%s", "pre", rd)
+	rd.Host = configureString(rd.Host, EnvNameRedisHost, DefaultRedisHost)
 	rd.Port = configureString(rd.Port, EnvNameRedisPort, DefaultRedisPort)
 	rd.DB = configureInt(rd.DB, EnvNameRedisDB, DefaultRedisDB)
 	rd.Timeout = configureInt(rd.Timeout, EnvNameRedisTimeout, DefaultRedisTimeout)
@@ -528,8 +529,8 @@ var (
 )
 
 func (rd RedisStorage) String() string {
-	json, _ := json.Marshal(rd)
-	return string(json)
+	strVal, _ := json.Marshal(rd)
+	return string(strVal)
 }
 
 func configureBool(value bool, envVariableName string, valueDefault bool) bool {
