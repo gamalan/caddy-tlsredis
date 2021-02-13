@@ -9,6 +9,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -121,7 +122,8 @@ type RedisStorage struct {
 	TlsEnabled  bool   `json:"tls_enabled"`
 	TlsInsecure bool   `json:"tls_insecure"`
 
-	locks map[string]*redislock.Lock
+	locks   map[string]*redislock.Lock
+	locksMu sync.Mutex
 }
 
 // StorageData describe the data that is stored in KV storage
@@ -494,6 +496,9 @@ func (rd RedisStorage) getDataDecrypted(key string) (*StorageData, error) {
 func (rd RedisStorage) Lock(ctx context.Context, key string) error {
 	lockName := rd.prefixKey(key) + ".lock"
 
+	rd.locksMu.Lock()
+	defer rd.locksMu.Unlock()
+
 	// check if we have the lock
 	if lock, exists := rd.locks[key]; exists {
 		if ttl, err := lock.TTL(rd.ctx); err != nil {
@@ -527,6 +532,9 @@ func (rd RedisStorage) Lock(ctx context.Context, key string) error {
 
 // Unlock is to unlock value
 func (rd RedisStorage) Unlock(key string) error {
+	rd.locksMu.Lock()
+	defer rd.locksMu.Unlock()
+
 	if lock, exists := rd.locks[key]; exists {
 		err := lock.Release(rd.ctx)
 		delete(rd.locks, key)
