@@ -122,8 +122,7 @@ type RedisStorage struct {
 	TlsEnabled  bool   `json:"tls_enabled"`
 	TlsInsecure bool   `json:"tls_insecure"`
 
-	locks   map[string]*redislock.Lock
-	locksMu sync.Mutex
+	locks *sync.Map
 }
 
 // StorageData describe the data that is stored in KV storage
@@ -323,7 +322,7 @@ func (rd *RedisStorage) BuildRedisClient() error {
 
 	rd.Client = redisClient
 	rd.ClientLocker = redislock.New(rd.Client)
-	rd.locks = make(map[string]*redislock.Lock)
+	rd.locks = &sync.Map{}
 	return nil
 }
 
@@ -496,25 +495,24 @@ func (rd RedisStorage) getDataDecrypted(key string) (*StorageData, error) {
 func (rd RedisStorage) Lock(ctx context.Context, key string) error {
 	lockName := rd.prefixKey(key) + ".lock"
 
-	rd.locksMu.Lock()
-	defer rd.locksMu.Unlock()
-
 	// check if we have the lock
-	if lock, exists := rd.locks[key]; exists {
-		if ttl, err := lock.TTL(rd.ctx); err != nil {
-			return err
-		} else if ttl < InactiveLockDuration && ttl > 0 {
-			// if the lock almost ending
-			err := lock.Refresh(rd.ctx, LockDuration, nil)
-			if err != nil {
+	if lockI, exists := rd.locks.Load(key); exists {
+		if lock, ok := lockI.(*redislock.Lock); ok {
+			if ttl, err := lock.TTL(rd.ctx); err != nil {
 				return err
+			} else if ttl < InactiveLockDuration && ttl > 0 {
+				// if the lock almost ending
+				err := lock.Refresh(rd.ctx, LockDuration, nil)
+				if err != nil {
+					return err
+				}
+			} else if ttl == 0 {
+				// lock is dead, clean it up from locks data
+				_ = lock.Release(rd.ctx)
+				rd.locks.Delete(key)
+			} else {
+				return nil
 			}
-		} else if ttl == 0 {
-			// lock is dead, clean it up from locks data
-			_ = lock.Release(rd.ctx)
-			delete(rd.locks, key)
-		} else {
-			return nil
 		}
 	}
 
@@ -525,21 +523,20 @@ func (rd RedisStorage) Lock(ctx context.Context, key string) error {
 	}
 
 	// save it
-	rd.locks[key] = lockActive
+	rd.locks.Store(key, lockActive)
 
 	return nil
 }
 
 // Unlock is to unlock value
 func (rd RedisStorage) Unlock(key string) error {
-	rd.locksMu.Lock()
-	defer rd.locksMu.Unlock()
-
-	if lock, exists := rd.locks[key]; exists {
-		err := lock.Release(rd.ctx)
-		delete(rd.locks, key)
-		if err != nil {
-			return fmt.Errorf("we don't have this lock anymore, %v", err)
+	if lockI, exists := rd.locks.Load(key); exists {
+		if lock, ok := lockI.(*redislock.Lock); ok {
+			err := lock.Release(rd.ctx)
+			rd.locks.Delete(key)
+			if err != nil {
+				return fmt.Errorf("we don't have this lock anymore, %v", err)
+			}
 		}
 	}
 	return nil
