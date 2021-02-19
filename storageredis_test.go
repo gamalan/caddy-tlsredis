@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"sync"
 	"testing"
 
 	"github.com/caddyserver/certmagic"
@@ -184,27 +185,29 @@ func TestRedisStorage_LockUnlock(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRedisStorage_TwoLocks(t *testing.T) {
-	rd := setupRedisEnv(t)
-	rd2 := setupRedisEnv(t)
-	lockKey := path.Join("acme", "example.com", "sites", "example.com", "lock")
+func lockAndUnlock(wg *sync.WaitGroup, t *testing.T, rd *RedisStorage, lockKey string) {
+	defer wg.Done()
 
 	err := rd.Lock(context.TODO(), lockKey)
 	assert.NoError(t, err)
-
-	// other instance shouldn't be able lock it
-	err = rd2.Lock(context.TODO(), lockKey)
-	assert.Error(t, err)
-
-	// let's unlock it first so other can lock it
 	err = rd.Unlock(lockKey)
 	assert.NoError(t, err)
+}
 
-	// we should be able to lock it
-	err = rd2.Lock(context.TODO(), lockKey)
-	assert.NoError(t, err)
+func TestRedisStorage_MultipleLocks(t *testing.T) {
+	lockKey := path.Join("acme", "example.com", "sites", "example.com", "lock")
 
-	// and unlock
-	err = rd2.Unlock(lockKey)
-	assert.NoError(t, err)
+	var wg sync.WaitGroup
+	rds := make([]*RedisStorage, 100)
+
+	for i := 0; i < 100; i++ {
+		rd := setupRedisEnv(t)
+		wg.Add(1)
+		rds[i] = rd
+	}
+	for i := 0; i < len(rds); i++ {
+		go lockAndUnlock(&wg, t, rds[i], lockKey)
+	}
+
+	wg.Wait()
 }

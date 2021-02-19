@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,11 +23,19 @@ import (
 )
 
 const (
-	// InactiveLockDuration is when the lock is considered as stale and need to be refreshed
-	InactiveLockDuration = 4 * time.Hour
-
 	// LockDuration is lock time duration
-	LockDuration = 8 * time.Hour
+	LockDuration = 10 * time.Second
+
+	// LockFreshnessInterval is how often to update a lock's TTL. Locks with a TTL
+	// more than this duration in the past (plus a grace period for latency) can be
+	// considered stale.
+	LockFreshnessInterval = 3 * time.Second
+
+	// LockPollInterval is how frequently to check the existence of a lock
+	LockPollInterval = 1 * time.Second
+
+	// Maximum size for the stack trace when recovering from panics.
+	stackTraceBufferSize = 1024 * 128
 
 	// ScanCount is how many scan command might return
 	ScanCount int64 = 100
@@ -492,44 +501,114 @@ func (rd RedisStorage) getDataDecrypted(key string) (*StorageData, error) {
 }
 
 // Lock is to lock value
-func (rd RedisStorage) Lock(ctx context.Context, key string) error {
-	lockName := rd.prefixKey(key) + ".lock"
+func (rd *RedisStorage) Lock(ctx context.Context, key string) error {
+	for {
+		_, err := rd.obtainLock(key)
+		if err == nil {
+			// got the lock, yay
+			return nil
+		}
+		if err != redislock.ErrNotObtained {
+			// unexpected error
+			return fmt.Errorf("creating redis lock: %v", err)
+		}
 
-	// check if we have the lock
-	if lockI, exists := rd.locks.Load(key); exists {
-		if lock, ok := lockI.(*redislock.Lock); ok {
-			if ttl, err := lock.TTL(rd.ctx); err != nil {
-				return err
-			} else if ttl < InactiveLockDuration && ttl > 0 {
-				// if the lock almost ending
-				err := lock.Refresh(rd.ctx, LockDuration, nil)
-				if err != nil {
-					return err
-				}
-			} else if ttl == 0 {
-				// lock is dead, clean it up from locks data
-				_ = lock.Release(rd.ctx)
-				rd.locks.Delete(key)
-			} else {
-				return nil
-			}
+		// lock exists and is not stale;
+		// just wait a moment and try again,
+		// or return if context cancelled
+		select {
+		case <-time.After(LockPollInterval):
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
-
-	// obtain new lock
-	lockActive, err := rd.ClientLocker.Obtain(rd.ctx, lockName, LockDuration, &redislock.Options{})
-	if err != nil {
-		return fmt.Errorf("can't obtain lock, it still being held by other, %v", err)
-	}
-
-	// save it
-	rd.locks.Store(key, lockActive)
 
 	return nil
 }
 
+func (rd *RedisStorage) obtainLock(key string) (*redislock.Lock, error) {
+	lockName := rd.prefixKey(key) + ".lock"
+
+	if lockI, exists := rd.locks.Load(key); exists {
+		// check if the lock is stale and cleanup if needed
+		if lock, ok := lockI.(*redislock.Lock); ok {
+			if ttl, err := lock.TTL(rd.ctx); err != nil {
+				return nil, err
+			} else if ttl == 0 {
+				// lock is dead, clean it up from locks data
+				_ = lock.Release(rd.ctx)
+				rd.locks.Delete(key)
+			}
+		}
+		// lock already exists, unable to obtain
+		return nil, redislock.ErrNotObtained
+	} else {
+		// obtain new lock
+		lock, err := rd.ClientLocker.Obtain(rd.ctx, lockName, LockDuration, &redislock.Options{})
+		if err != nil {
+			return nil, err
+		}
+
+		// save it
+		rd.locks.Store(key, lock)
+
+		// keep the lock fresh as long as we hold it
+		go rd.keepRedisLockFresh(key)
+
+		return lock, nil
+	}
+}
+
+// keepRedisLockFresh continuously updates the lock TTL. It stops when
+// the lock disappears from rd.locks. Since it pools every
+// LockFreshnessInterval, this function might not terminate until up to
+// LockFreshnessInterval after the lock is released.
+func (rd *RedisStorage) keepRedisLockFresh(key string) {
+	defer func() {
+		if err := recover(); err != nil {
+			buf := make([]byte, stackTraceBufferSize)
+			buf = buf[:runtime.Stack(buf, false)]
+			rd.Logger.Errorf("panic: active locking: %v\n%s", err, buf)
+		}
+	}()
+
+	for {
+		time.Sleep(LockFreshnessInterval)
+		done, err := rd.updateRedisLockFreshness(key)
+		if err != nil {
+			rd.Logger.Errorf("[ERROR] Keeping redis lock fresh: %v - terminating lock maintenance (lock: %s)", err, key)
+			return
+		}
+		if done {
+			return
+		}
+	}
+}
+
+func (rd *RedisStorage) updateRedisLockFreshness(key string) (bool, error) {
+	l, exists := rd.locks.Load(key)
+	if !exists {
+		// lock released
+		return true, nil
+	}
+
+	lock, ok := l.(*redislock.Lock)
+	if !ok {
+		return true, fmt.Errorf("uable to cast to redislock")
+	}
+
+	// refresh the lock's TTL every LockFreshnessInterval
+	err := lock.Refresh(rd.ctx, LockDuration, nil)
+	if err != nil {
+		rd.Logger.Errorf("[ERROR] Keeping redis lock fresh: %v - terminating lock maintenance (lock: %s)", err, key)
+		return true, err
+	}
+
+	return false, nil
+}
+
 // Unlock is to unlock value
-func (rd RedisStorage) Unlock(key string) error {
+func (rd *RedisStorage) Unlock(key string) error {
 	if lockI, exists := rd.locks.Load(key); exists {
 		if lock, ok := lockI.(*redislock.Lock); ok {
 			err := lock.Release(rd.ctx)
