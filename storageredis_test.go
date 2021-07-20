@@ -2,6 +2,7 @@ package storageredis
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path"
 	"sync"
@@ -210,4 +211,25 @@ func TestRedisStorage_MultipleLocks(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestRedisStorage_String(t *testing.T) {
+	rd := new(RedisStorage)
+	t.Run("validate password", func(t *testing.T) {
+		t.Run("is redacted when set", func(t *testing.T) {
+			testrd := new(RedisStorage)
+			password := "iAmASuperSecurePassword"
+			rd.Password = password
+			err := json.Unmarshal([]byte(rd.String()), &testrd)
+			assert.NoError(t, err)
+			assert.Equal(t, "REDACTED", testrd.Password)
+			assert.Equal(t, password, rd.Password)
+		})
+		rd.Password = ""
+		t.Run("is empty if not set", func(t *testing.T) {
+			err := json.Unmarshal([]byte(rd.String()), &rd)
+			assert.NoError(t, err)
+			assert.Empty(t, rd.Password)
+		})
+	})
 }
