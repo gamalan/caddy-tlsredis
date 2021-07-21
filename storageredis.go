@@ -633,8 +633,12 @@ var (
 )
 
 func (rd RedisStorage) String() string {
+	redacted := `REDACTED`
 	if rd.Password != "" {
-		rd.Password = "REDACTED"
+		rd.Password = redacted
+	}
+	if rd.AesKey != "" {
+		rd.AesKey = redacted
 	}
 	strVal, _ := json.Marshal(rd)
 	return string(strVal)

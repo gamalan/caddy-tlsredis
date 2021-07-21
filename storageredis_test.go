@@ -215,6 +215,7 @@ func TestRedisStorage_MultipleLocks(t *testing.T) {
 
 func TestRedisStorage_String(t *testing.T) {
 	rd := new(RedisStorage)
+	redacted := `REDACTED`
 	t.Run("validate password", func(t *testing.T) {
 		t.Run("is redacted when set", func(t *testing.T) {
 			testrd := new(RedisStorage)
@@ -222,7 +223,7 @@ func TestRedisStorage_String(t *testing.T) {
 			rd.Password = password
 			err := json.Unmarshal([]byte(rd.String()), &testrd)
 			assert.NoError(t, err)
-			assert.Equal(t, "REDACTED", testrd.Password)
+			assert.Equal(t, redacted, testrd.Password)
 			assert.Equal(t, password, rd.Password)
 		})
 		rd.Password = ""
@@ -230,6 +231,23 @@ func TestRedisStorage_String(t *testing.T) {
 			err := json.Unmarshal([]byte(rd.String()), &rd)
 			assert.NoError(t, err)
 			assert.Empty(t, rd.Password)
+		})
+	})
+	t.Run("validate AES key", func(t *testing.T) {
+		t.Run("is redacted when set", func(t *testing.T) {
+			testrd := new(RedisStorage)
+			aeskey := "abcdefghijklmnopqrstuvwxyz123456"
+			rd.AesKey = aeskey
+			err := json.Unmarshal([]byte(rd.String()), &testrd)
+			assert.NoError(t, err)
+			assert.Equal(t, redacted, testrd.AesKey)
+			assert.Equal(t, aeskey, rd.AesKey)
+		})
+		rd.AesKey = ""
+		t.Run("is empty if not set", func(t *testing.T) {
+			err := json.Unmarshal([]byte(rd.String()), &rd)
+			assert.NoError(t, err)
+			assert.Empty(t, rd.AesKey)
 		})
 	})
 }
