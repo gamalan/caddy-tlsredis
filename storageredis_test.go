@@ -21,7 +21,7 @@ func setupRedisEnv(t *testing.T) *RedisStorage {
 
 	rd := new(RedisStorage)
 	rd.GetConfigValue()
-	err := rd.BuildRedisClient()
+	err := rd.BuildRedisClient(nil)
 
 	// skip test if no redis storage
 	if err != nil {

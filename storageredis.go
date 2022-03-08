@@ -273,7 +273,7 @@ func (rd *RedisStorage) Provision(ctx caddy.Context) error {
 	rd.Logger = ctx.Logger(rd).Sugar()
 	rd.GetConfigValue()
 	rd.Logger.Info("TLS Storage are using Redis, on " + rd.Address)
-	if err := rd.BuildRedisClient(); err != nil {
+	if err := rd.BuildRedisClient(ctx.Context); err != nil {
 		return err
 	}
 	return nil
@@ -306,8 +306,12 @@ func (rd *RedisStorage) prefixKey(key string) string {
 }
 
 // GetRedisStorage build RedisStorage with it's client
-func (rd *RedisStorage) BuildRedisClient() error {
-	rd.ctx = context.Background()
+func (rd *RedisStorage) BuildRedisClient(ctx context.Context) error {
+	if ctx != nil {
+		rd.ctx = ctx
+	} else {
+		rd.ctx = context.Background()
+	}
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:         rd.Address,
 		Username:     rd.Username,
