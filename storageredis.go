@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"runtime"
@@ -340,7 +341,7 @@ func (rd *RedisStorage) BuildRedisClient(ctx context.Context) error {
 }
 
 // Store values at key
-func (rd RedisStorage) Store(key string, value []byte) error {
+func (rd RedisStorage) Store(_ context.Context, key string, value []byte) error {
 	data := &StorageData{
 		Value:    value,
 		Modified: time.Now(),
@@ -359,7 +360,7 @@ func (rd RedisStorage) Store(key string, value []byte) error {
 }
 
 // Load retrieves the value at key.
-func (rd RedisStorage) Load(key string) ([]byte, error) {
+func (rd RedisStorage) Load(_ context.Context, key string) ([]byte, error) {
 	data, err := rd.getDataDecrypted(key)
 
 	if err != nil {
@@ -370,7 +371,7 @@ func (rd RedisStorage) Load(key string) ([]byte, error) {
 }
 
 // Delete deletes key.
-func (rd RedisStorage) Delete(key string) error {
+func (rd RedisStorage) Delete(_ context.Context, key string) error {
 	_, err := rd.getData(key)
 
 	if err != nil {
@@ -385,7 +386,7 @@ func (rd RedisStorage) Delete(key string) error {
 }
 
 // Exists returns true if the key exists
-func (rd RedisStorage) Exists(key string) bool {
+func (rd RedisStorage) Exists(_ context.Context, key string) bool {
 	_, err := rd.getData(key)
 	if err == nil {
 		return true
@@ -394,7 +395,7 @@ func (rd RedisStorage) Exists(key string) bool {
 }
 
 // List returns all keys that match prefix.
-func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
+func (rd RedisStorage) List(_ context.Context, prefix string, recursive bool) ([]string, error) {
 	var keysFound []string
 	var tempKeys []string
 	var firstPointer uint64 = 0
@@ -459,7 +460,7 @@ func (rd RedisStorage) List(prefix string, recursive bool) ([]string, error) {
 }
 
 // Stat returns information about key.
-func (rd RedisStorage) Stat(key string) (certmagic.KeyInfo, error) {
+func (rd RedisStorage) Stat(_ context.Context, key string) (certmagic.KeyInfo, error) {
 	data, err := rd.getDataDecrypted(key)
 
 	if err != nil {
@@ -481,7 +482,7 @@ func (rd RedisStorage) getData(key string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to obtain data for %s: %v", key, err)
 	} else if data == nil {
-		return nil, certmagic.ErrNotExist(fmt.Errorf("key %s does not exist", key))
+		return nil, fs.ErrNotExist
 	}
 
 	return data, nil
@@ -612,7 +613,7 @@ func (rd *RedisStorage) updateRedisLockFreshness(key string) (bool, error) {
 }
 
 // Unlock is to unlock value
-func (rd *RedisStorage) Unlock(key string) error {
+func (rd *RedisStorage) Unlock(_ context.Context, key string) error {
 	if lockI, exists := rd.locks.Load(key); exists {
 		if lock, ok := lockI.(*redislock.Lock); ok {
 			err := lock.Release(rd.ctx)
