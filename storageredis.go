@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -479,7 +480,9 @@ func (rd RedisStorage) Stat(_ context.Context, key string) (certmagic.KeyInfo, e
 func (rd RedisStorage) getData(key string) ([]byte, error) {
 	data, err := rd.Client.Get(rd.ctx, rd.prefixKey(key)).Bytes()
 
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, fs.ErrNotExist
+	} else if err != nil {
 		return nil, fmt.Errorf("unable to obtain data for %s: %v", key, err)
 	} else if data == nil {
 		return nil, fs.ErrNotExist
