@@ -480,7 +480,7 @@ func (rd RedisStorage) Stat(_ context.Context, key string) (certmagic.KeyInfo, e
 func (rd RedisStorage) getData(key string) ([]byte, error) {
 	data, err := rd.Client.Get(rd.ctx, rd.prefixKey(key)).Bytes()
 
-	if errors.Is(err, fs.ErrNotExist) {
+	if errors.Is(err, redis.Nil) {
 		return nil, fs.ErrNotExist
 	} else if err != nil {
 		return nil, fmt.Errorf("unable to obtain data for %s: %v", key, err)
