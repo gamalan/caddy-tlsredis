@@ -3,6 +3,8 @@ package storageredis
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path"
 	"sync"
@@ -88,6 +90,9 @@ func TestRedisStorage_Delete(t *testing.T) {
 
 	contentLoaded, err := rd.Load(context.TODO(), key)
 	assert.Nil(t, contentLoaded)
+
+	notExist := errors.Is(err, fs.ErrNotExist)
+	assert.True(t, notExist)
 }
 
 func TestRedisStorage_Stat(t *testing.T) {
