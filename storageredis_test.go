@@ -22,7 +22,7 @@ func setupRedisEnv(t *testing.T) *RedisStorage {
 
 	rd := new(RedisStorage)
 	rd.GetConfigValue()
-	err := rd.BuildRedisClient(nil)
+	err := rd.BuildRedisClient(context.TODO())
 
 	// skip test if no redis storage
 	if err != nil {
@@ -42,7 +42,7 @@ func setupRedisEnv(t *testing.T) *RedisStorage {
 func TestRedisStorage_Store(t *testing.T) {
 	rd := setupRedisEnv(t)
 
-	err := rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"), []byte("crt data"))
+	err := rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"), []byte("crt data"))
 	assert.NoError(t, err)
 }
 
@@ -51,10 +51,10 @@ func TestRedisStorage_Exists(t *testing.T) {
 
 	key := path.Join("acme", "example.com", "sites", "example.com", "example.com.crt")
 
-	err := rd.Store(key, []byte("crt data"))
+	err := rd.Store(context.TODO(), key, []byte("crt data"))
 	assert.NoError(t, err)
 
-	exists := rd.Exists(key)
+	exists := rd.Exists(context.TODO(), key)
 	assert.True(t, exists)
 }
 
@@ -64,10 +64,10 @@ func TestRedisStorage_Load(t *testing.T) {
 	key := path.Join("acme", "example.com", "sites", "example.com", "example.com.crt")
 	content := []byte("crt data")
 
-	err := rd.Store(key, content)
+	err := rd.Store(context.TODO(), key, content)
 	assert.NoError(t, err)
 
-	contentLoded, err := rd.Load(key)
+	contentLoded, err := rd.Load(context.TODO(), key)
 	assert.NoError(t, err)
 
 	assert.Equal(t, content, contentLoded)
@@ -79,16 +79,16 @@ func TestRedisStorage_Delete(t *testing.T) {
 	key := path.Join("acme", "example.com", "sites", "example.com", "example.com.crt")
 	content := []byte("crt data")
 
-	err := rd.Store(key, content)
+	err := rd.Store(context.TODO(), key, content)
 	assert.NoError(t, err)
 
-	err = rd.Delete(key)
+	err = rd.Delete(context.TODO(), key)
 	assert.NoError(t, err)
 
-	exists := rd.Exists(key)
+	exists := rd.Exists(context.TODO(), key)
 	assert.False(t, exists)
 
-	contentLoaded, err := rd.Load(key)
+	contentLoaded, err := rd.Load(context.TODO(), key)
 	assert.Nil(t, contentLoaded)
 
 	notExist := errors.Is(err, fs.ErrNotExist)
@@ -101,10 +101,10 @@ func TestRedisStorage_Stat(t *testing.T) {
 	key := path.Join("acme", "example.com", "sites", "example.com", "example.com.crt")
 	content := []byte("crt data")
 
-	err := rd.Store(key, content)
+	err := rd.Store(context.TODO(), key, content)
 	assert.NoError(t, err)
 
-	info, err := rd.Stat(key)
+	info, err := rd.Stat(context.TODO(), key)
 	assert.NoError(t, err)
 
 	assert.Equal(t, key, info.Key)
@@ -113,29 +113,29 @@ func TestRedisStorage_Stat(t *testing.T) {
 func TestRedisStorage_List(t *testing.T) {
 	rd := setupRedisEnv(t)
 
-	err := rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"), []byte("crt"))
+	err := rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"), []byte("crt"))
 	assert.NoError(t, err)
-	err = rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.key"), []byte("key"))
+	err = rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.key"), []byte("key"))
 	assert.NoError(t, err)
-	err = rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.json"), []byte("meta"))
+	err = rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.json"), []byte("meta"))
 	assert.NoError(t, err)
 
-	keys, err := rd.List(path.Join("acme", "example.com", "sites", "example.com"), true)
+	keys, err := rd.List(context.TODO(), path.Join("acme", "example.com", "sites", "example.com"), true)
 	assert.NoError(t, err)
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
 
-	keys, err = rd.List("*", true)
+	keys, err = rd.List(context.TODO(), "*", true)
 	assert.NoError(t, err)
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
 
-	keys, err = rd.List("", true)
+	keys, err = rd.List(context.TODO(), "", true)
 	assert.NoError(t, err)
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
 
-	keys, err = rd.List("   ", true)
+	keys, err = rd.List(context.TODO(), "   ", true)
 	assert.NoError(t, err)
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
@@ -144,32 +144,32 @@ func TestRedisStorage_List(t *testing.T) {
 func TestRedisStorage_ListNonRecursive(t *testing.T) {
 	rd := setupRedisEnv(t)
 
-	err := rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"), []byte("crt"))
+	err := rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"), []byte("crt"))
 	assert.NoError(t, err)
-	err = rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.key"), []byte("key"))
+	err = rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.key"), []byte("key"))
 	assert.NoError(t, err)
-	err = rd.Store(path.Join("acme", "example.com", "sites", "example.com", "example.com.json"), []byte("meta"))
+	err = rd.Store(context.TODO(), path.Join("acme", "example.com", "sites", "example.com", "example.com.json"), []byte("meta"))
 	assert.NoError(t, err)
 
-	keys, err := rd.List(path.Join("acme", "example.com", "sites"), false)
+	keys, err := rd.List(context.TODO(), path.Join("acme", "example.com", "sites"), false)
 	assert.NoError(t, err)
 
 	assert.Len(t, keys, 1)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com"))
 
-	keys, err = rd.List("*", false)
+	keys, err = rd.List(context.TODO(), "*", false)
 	assert.NoError(t, err)
 
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
 
-	keys, err = rd.List("", false)
+	keys, err = rd.List(context.TODO(), "", false)
 	assert.NoError(t, err)
 
 	assert.Len(t, keys, 3)
 	assert.Contains(t, keys, path.Join("acme", "example.com", "sites", "example.com", "example.com.crt"))
 
-	keys, err = rd.List("   ", false)
+	keys, err = rd.List(context.TODO(), "   ", false)
 	assert.NoError(t, err)
 
 	assert.Len(t, keys, 3)
@@ -183,7 +183,7 @@ func TestRedisStorage_LockUnlock(t *testing.T) {
 	err := rd.Lock(context.TODO(), lockKey)
 	assert.NoError(t, err)
 
-	err = rd.Unlock(lockKey)
+	err = rd.Unlock(context.TODO(), lockKey)
 	assert.NoError(t, err)
 }
 
@@ -192,7 +192,7 @@ func lockAndUnlock(wg *sync.WaitGroup, t *testing.T, rd *RedisStorage, lockKey s
 
 	err := rd.Lock(context.TODO(), lockKey)
 	assert.NoError(t, err)
-	err = rd.Unlock(lockKey)
+	err = rd.Unlock(context.TODO(), lockKey)
 	assert.NoError(t, err)
 }
 
