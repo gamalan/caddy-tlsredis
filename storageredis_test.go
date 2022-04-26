@@ -3,12 +3,13 @@ package storageredis
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path"
 	"sync"
 	"testing"
 
-	"github.com/caddyserver/certmagic"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,7 +22,7 @@ func setupRedisEnv(t *testing.T) *RedisStorage {
 
 	rd := new(RedisStorage)
 	rd.GetConfigValue()
-	err := rd.BuildRedisClient(nil)
+	err := rd.BuildRedisClient(context.TODO())
 
 	// skip test if no redis storage
 	if err != nil {
@@ -90,8 +91,8 @@ func TestRedisStorage_Delete(t *testing.T) {
 	contentLoaded, err := rd.Load(context.TODO(), key)
 	assert.Nil(t, contentLoaded)
 
-	_, ok := err.(certmagic.ErrNotExist)
-	assert.True(t, ok)
+	notExist := errors.Is(err, fs.ErrNotExist)
+	assert.True(t, notExist)
 }
 
 func TestRedisStorage_Stat(t *testing.T) {
