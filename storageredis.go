@@ -273,12 +273,31 @@ func (rd *RedisStorage) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 func (rd *RedisStorage) Provision(ctx caddy.Context) error {
 	rd.Logger = ctx.Logger(rd).Sugar()
+	rd.ReplaceEnvConfigCaddy()
 	rd.GetConfigValue()
 	rd.Logger.Info("TLS Storage are using Redis, on " + rd.Address)
 	if err := rd.BuildRedisClient(ctx.Context); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (rd *RedisStorage) ReplaceEnvConfigCaddy() {
+	repl := caddy.NewReplacer()
+	host := repl.ReplaceAll(rd.Host, DefaultRedisHost)
+	rd.Host = host
+	port := repl.ReplaceAll(rd.Port, DefaultRedisPort)
+	rd.Port = port
+	username := repl.ReplaceAll(rd.Username, DefaultRedisUsername)
+	rd.Username = username
+	password := repl.ReplaceAll(rd.Password, DefaultRedisPassword)
+	rd.Password = password
+	keyPrefix := repl.ReplaceAll(rd.KeyPrefix, DefaultKeyPrefix)
+	rd.KeyPrefix = keyPrefix
+	valuePrefix := repl.ReplaceAll(rd.ValuePrefix, DefaultValuePrefix)
+	rd.ValuePrefix = valuePrefix
+	aesKey := repl.ReplaceAll(rd.AesKey, DefaultAESKey)
+	rd.AesKey = aesKey
 }
 
 // GetConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
