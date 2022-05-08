@@ -284,20 +284,18 @@ func (rd *RedisStorage) Provision(ctx caddy.Context) error {
 
 func (rd *RedisStorage) ReplaceEnvConfigCaddy() {
 	repl := caddy.NewReplacer()
-	host := repl.ReplaceAll(rd.Host, DefaultRedisHost)
-	rd.Host = host
-	port := repl.ReplaceAll(rd.Port, DefaultRedisPort)
-	rd.Port = port
-	username := repl.ReplaceAll(rd.Username, DefaultRedisUsername)
-	rd.Username = username
-	password := repl.ReplaceAll(rd.Password, DefaultRedisPassword)
-	rd.Password = password
-	keyPrefix := repl.ReplaceAll(rd.KeyPrefix, DefaultKeyPrefix)
-	rd.KeyPrefix = keyPrefix
-	valuePrefix := repl.ReplaceAll(rd.ValuePrefix, DefaultValuePrefix)
-	rd.ValuePrefix = valuePrefix
-	aesKey := repl.ReplaceAll(rd.AesKey, DefaultAESKey)
-	rd.AesKey = aesKey
+	logger, _ := zap.NewProduction()
+	defer logger.Sync() // flushes buffer, if any
+	rd.Logger = logger.Sugar()
+	rd.Host = repl.ReplaceAll(rd.Host, DefaultRedisHost)
+	rd.Port = repl.ReplaceAll(rd.Port, DefaultRedisPort)
+	rd.Username = repl.ReplaceAll(rd.Username, DefaultRedisUsername)
+	rd.Password = repl.ReplaceAll(rd.Password, DefaultRedisPassword)
+	rd.KeyPrefix = repl.ReplaceAll(rd.KeyPrefix, DefaultKeyPrefix)
+	rd.ValuePrefix = repl.ReplaceAll(rd.ValuePrefix, DefaultValuePrefix)
+	rd.AesKey = repl.ReplaceAll(rd.AesKey, DefaultAESKey)
+	rd.Address = configureString(rd.Address, "", rd.Host+":"+rd.Port)
+	rd.Logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
 }
 
 // GetConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
