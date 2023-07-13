@@ -115,11 +115,6 @@ const (
 
 // RedisStorage contain Redis client, and plugin option
 type RedisStorage struct {
-	Client       *redis.Client
-	ClientLocker *redislock.Client
-	Logger       *zap.SugaredLogger
-	ctx          context.Context
-
 	Address     string `json:"address"`
 	Host        string `json:"host"`
 	Port        string `json:"port"`
@@ -133,7 +128,11 @@ type RedisStorage struct {
 	TlsEnabled  bool   `json:"tls_enabled"`
 	TlsInsecure bool   `json:"tls_insecure"`
 
-	locks *sync.Map
+	client       *redis.Client
+	clientLocker *redislock.Client
+	logger       *zap.SugaredLogger
+	ctx          context.Context
+	locks        *sync.Map
 }
 
 // StorageData describe the data that is stored in KV storage
@@ -272,10 +271,10 @@ func (rd *RedisStorage) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 }
 
 func (rd *RedisStorage) Provision(ctx caddy.Context) error {
-	rd.Logger = ctx.Logger(rd).Sugar()
+	rd.logger = ctx.Logger(rd).Sugar()
 	rd.ReplaceEnvConfigCaddy()
 	rd.GetConfigValue()
-	rd.Logger.Info("TLS Storage are using Redis, on " + rd.Address)
+	rd.logger.Info("TLS Storage are using Redis, on " + rd.Address)
 	if err := rd.BuildRedisClient(ctx.Context); err != nil {
 		return err
 	}
@@ -286,7 +285,7 @@ func (rd *RedisStorage) ReplaceEnvConfigCaddy() {
 	repl := caddy.NewReplacer()
 	logger, _ := zap.NewProduction()
 	defer logger.Sync() // flushes buffer, if any
-	rd.Logger = logger.Sugar()
+	rd.logger = logger.Sugar()
 	rd.Host = repl.ReplaceAll(rd.Host, DefaultRedisHost)
 	rd.Port = repl.ReplaceAll(rd.Port, DefaultRedisPort)
 	rd.Username = repl.ReplaceAll(rd.Username, DefaultRedisUsername)
@@ -294,16 +293,16 @@ func (rd *RedisStorage) ReplaceEnvConfigCaddy() {
 	rd.KeyPrefix = repl.ReplaceAll(rd.KeyPrefix, DefaultKeyPrefix)
 	rd.ValuePrefix = repl.ReplaceAll(rd.ValuePrefix, DefaultValuePrefix)
 	rd.AesKey = repl.ReplaceAll(rd.AesKey, DefaultAESKey)
-	rd.Address = configureString(rd.Address, "", rd.Host+":"+rd.Port)
-	rd.Logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
+	rd.Address = configureString(repl.ReplaceAll(rd.Address, ""), "", rd.Host+":"+rd.Port)
+	rd.logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
 }
 
 // GetConfigValue get Config value from env, if already been set by Caddyfile, don't overwrite
 func (rd *RedisStorage) GetConfigValue() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync() // flushes buffer, if any
-	rd.Logger = logger.Sugar()
-	rd.Logger.Debugf("GetConfigValue [%s]:%s", "pre", rd)
+	rd.logger = logger.Sugar()
+	rd.logger.Debugf("GetConfigValue [%s]:%s", "pre", rd)
 	rd.Host = configureString(rd.Host, EnvNameRedisHost, DefaultRedisHost)
 	rd.Port = configureString(rd.Port, EnvNameRedisPort, DefaultRedisPort)
 	rd.DB = configureInt(rd.DB, EnvNameRedisDB, DefaultRedisDB)
@@ -316,7 +315,7 @@ func (rd *RedisStorage) GetConfigValue() {
 	rd.ValuePrefix = configureString(rd.ValuePrefix, EnvNameValuePrefix, DefaultValuePrefix)
 	rd.AesKey = configureString(rd.AesKey, EnvNameAESKey, DefaultAESKey)
 	rd.Address = configureString(rd.Address, "", rd.Host+":"+rd.Port)
-	rd.Logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
+	rd.logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
 }
 
 // helper function to prefix key
@@ -352,8 +351,8 @@ func (rd *RedisStorage) BuildRedisClient(ctx context.Context) error {
 		return err
 	}
 
-	rd.Client = redisClient
-	rd.ClientLocker = redislock.New(rd.Client)
+	rd.client = redisClient
+	rd.clientLocker = redislock.New(rd.client)
 	rd.locks = &sync.Map{}
 	return nil
 }
@@ -370,7 +369,7 @@ func (rd RedisStorage) Store(_ context.Context, key string, value []byte) error 
 		return fmt.Errorf("unable to encode data for %v: %v", key, err)
 	}
 
-	if err := rd.Client.Set(rd.ctx, rd.prefixKey(key), encryptedValue, 0).Err(); err != nil {
+	if err := rd.client.Set(rd.ctx, rd.prefixKey(key), encryptedValue, 0).Err(); err != nil {
 		return fmt.Errorf("unable to store data for %v: %v", key, err)
 	}
 
@@ -396,7 +395,7 @@ func (rd RedisStorage) Delete(_ context.Context, key string) error {
 		return err
 	}
 
-	if err := rd.Client.Del(rd.ctx, rd.prefixKey(key)).Err(); err != nil {
+	if err := rd.client.Del(rd.ctx, rd.prefixKey(key)).Err(); err != nil {
 		return fmt.Errorf("unable to delete data for key %s: %v", key, err)
 	}
 
@@ -430,7 +429,7 @@ func (rd RedisStorage) List(_ context.Context, prefix string, recursive bool) ([
 	}
 
 	// first SCAN command
-	keys, pointer, err := rd.Client.Scan(rd.ctx, pointer, search, ScanCount).Result()
+	keys, pointer, err := rd.client.Scan(rd.ctx, pointer, search, ScanCount).Result()
 	if err != nil {
 		return keysFound, err
 	}
@@ -438,7 +437,7 @@ func (rd RedisStorage) List(_ context.Context, prefix string, recursive bool) ([
 	tempKeys = append(tempKeys, keys...)
 	// because SCAN command doesn't always return all possible, keep searching until pointer is equal to the firstPointer
 	for pointer != firstPointer {
-		keys, nextPointer, _ := rd.Client.Scan(rd.ctx, pointer, search, ScanCount).Result()
+		keys, nextPointer, _ := rd.client.Scan(rd.ctx, pointer, search, ScanCount).Result()
 		tempKeys = append(tempKeys, keys...)
 		pointer = nextPointer
 	}
@@ -495,7 +494,7 @@ func (rd RedisStorage) Stat(_ context.Context, key string) (certmagic.KeyInfo, e
 
 // getData return data from redis by key as it is
 func (rd RedisStorage) getData(key string) ([]byte, error) {
-	data, err := rd.Client.Get(rd.ctx, rd.prefixKey(key)).Bytes()
+	data, err := rd.client.Get(rd.ctx, rd.prefixKey(key)).Bytes()
 
 	if errors.Is(err, redis.Nil) {
 		return nil, fs.ErrNotExist
@@ -547,8 +546,6 @@ func (rd *RedisStorage) Lock(ctx context.Context, key string) error {
 			return ctx.Err()
 		}
 	}
-
-	return nil
 }
 
 func (rd *RedisStorage) obtainLock(key string) (*redislock.Lock, error) {
@@ -569,7 +566,7 @@ func (rd *RedisStorage) obtainLock(key string) (*redislock.Lock, error) {
 		return nil, redislock.ErrNotObtained
 	} else {
 		// obtain new lock
-		lock, err := rd.ClientLocker.Obtain(rd.ctx, lockName, LockDuration, &redislock.Options{})
+		lock, err := rd.clientLocker.Obtain(rd.ctx, lockName, LockDuration, &redislock.Options{})
 		if err != nil {
 			return nil, err
 		}
@@ -593,7 +590,7 @@ func (rd *RedisStorage) keepRedisLockFresh(key string) {
 		if err := recover(); err != nil {
 			buf := make([]byte, stackTraceBufferSize)
 			buf = buf[:runtime.Stack(buf, false)]
-			rd.Logger.Errorf("panic: active locking: %v\n%s", err, buf)
+			rd.logger.Errorf("panic: active locking: %v\n%s", err, buf)
 		}
 	}()
 
@@ -601,7 +598,7 @@ func (rd *RedisStorage) keepRedisLockFresh(key string) {
 		time.Sleep(LockFreshnessInterval)
 		done, err := rd.updateRedisLockFreshness(key)
 		if err != nil {
-			rd.Logger.Errorf("[ERROR] Keeping redis lock fresh: %v - terminating lock maintenance (lock: %s)", err, key)
+			rd.logger.Errorf("[ERROR] Keeping redis lock fresh: %v - terminating lock maintenance (lock: %s)", err, key)
 			return
 		}
 		if done {
@@ -625,7 +622,7 @@ func (rd *RedisStorage) updateRedisLockFreshness(key string) (bool, error) {
 	// refresh the lock's TTL every LockFreshnessInterval
 	err := lock.Refresh(rd.ctx, LockDuration, nil)
 	if err != nil {
-		rd.Logger.Errorf("[ERROR] Keeping redis lock fresh: %v - terminating lock maintenance (lock: %s)", err, key)
+		rd.logger.Errorf("[ERROR] Keeping redis lock fresh: %v - terminating lock maintenance (lock: %s)", err, key)
 		return true, err
 	}
 

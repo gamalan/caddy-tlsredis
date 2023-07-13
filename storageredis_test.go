@@ -34,7 +34,7 @@ func setupRedisEnv(t *testing.T) *RedisStorage {
 	assert.Equal(t, TestPrefix, rd.KeyPrefix)
 	assert.Equal(t, 9, rd.DB)
 
-	_, err = rd.Client.FlushAll(rd.ctx).Result()
+	_, err = rd.client.FlushAll(rd.ctx).Result()
 	assert.NoError(t, err)
 	return rd
 }
