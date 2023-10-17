@@ -42,8 +42,8 @@ func (rd *RedisStorage) EncryptStorageData(data *StorageData) ([]byte, error) {
 		return nil, fmt.Errorf("unable to marshal: %v", err)
 	}
 
-	// Prefix with simple prefix and then encrypt
-	bytes = append([]byte(rd.ValuePrefix), bytes...)
+	// Do not prefix byte value before encrypting
+	//bytes = append([]byte(rd.ValuePrefix), bytes...)
 	return rd.encrypt(bytes)
 }
 
@@ -82,14 +82,15 @@ func (rd *RedisStorage) DecryptStorageData(bytes []byte) (*StorageData, error) {
 		return nil, err
 	}
 
-	// Simple sanity check of the beginning of the byte array just to check
-	if len(bytes) < len(rd.ValuePrefix) || string(bytes[:len(rd.ValuePrefix)]) != rd.ValuePrefix {
-		return nil, fmt.Errorf("invalid data format")
+	// Strip unused prefix from the beginning of the byte array if present
+	var PrefixLength = len(rd.ValuePrefix)
+	if len(bytes) >= PrefixLength && string(bytes[:PrefixLength]) == rd.ValuePrefix {
+		bytes = bytes[PrefixLength:]
 	}
 
 	// Now just json unmarshal
 	data := &StorageData{}
-	if err := json.Unmarshal(bytes[len(rd.ValuePrefix):], data); err != nil {
+	if err := json.Unmarshal(bytes, data); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal result: %v", err)
 	}
 	return data, nil
