@@ -293,7 +293,7 @@ func (rd *RedisStorage) ReplaceEnvConfigCaddy() {
 	rd.KeyPrefix = repl.ReplaceAll(rd.KeyPrefix, DefaultKeyPrefix)
 	rd.ValuePrefix = repl.ReplaceAll(rd.ValuePrefix, DefaultValuePrefix)
 	rd.AesKey = repl.ReplaceAll(rd.AesKey, DefaultAESKey)
-	rd.Address = configureString(repl.ReplaceAll(rd.Address, ""), "", rd.Host+":"+rd.Port)
+	rd.Address = configureString(repl.ReplaceAll(rd.Address, ""), "", "")
 	rd.logger.Debugf("GetConfigValue [%s]:%s", "post", rd)
 }
 
