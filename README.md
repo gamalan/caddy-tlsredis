@@ -5,7 +5,7 @@ Most of the aspect is also similar, I pretty much copy the crypto implementation
 The reason I use [Redis](https://redis.io/) is because it easier to setup.
 
 For now, this will support redis as single instance, or with replica, but NOT the cluster.
-This plugin utilize [go-redis/redis](https://github.com/go-redis/redis) for its client access and [redislock](https://github.com/bsm/redislock)
+This plugin utilize [redis/go-redis](https://github.com/redis/go-redis) for its client access and [redislock](https://github.com/bsm/redislock)
 for it's locking mechanism. See [distlock](https://redis.io/topics/distlock) for the lock algorithm.
 
 This plugin currently work with versions of Caddy v2, for the previous version of Caddy use [caddy-v1](https://github.com/gamalan/caddy-tlsredis/tree/caddy-v1) branch.
